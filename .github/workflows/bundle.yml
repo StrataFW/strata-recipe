@@ -85,16 +85,26 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Resolve bundle filename
+        id: name
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          if [ -n "$tag" ]; then
+            echo "file=strata-framework-${tag}.zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=strata-framework-nightly-$(date +%Y%m%d).zip" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Zip bundle
         run: |
-          cd out && zip -qr ../strata-bundle.zip . && cd ..
-          ls -lh strata-bundle.zip
+          cd out && zip -qr "../${{ steps.name.outputs.file }}" . && cd ..
+          ls -lh "${{ steps.name.outputs.file }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: strata-bundle
-          path: strata-bundle.zip
+          name: ${{ steps.name.outputs.file }}
+          path: ${{ steps.name.outputs.file }}
           retention-days: 30
 
       - name: Publish release
@@ -102,5 +112,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag }}
-          files: strata-bundle.zip
-          generate_release_notes: true
+          files: ${{ steps.name.outputs.file }}
+          generate_release_notes: false
+          body_path: RELEASE_NOTES.md
