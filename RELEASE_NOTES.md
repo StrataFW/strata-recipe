@@ -1,6 +1,6 @@
 <div align="center">
 
-# Strata Framework
+<img src="https://raw.githubusercontent.com/StrataFW/strata-recipe/main/.github/assets/banner.png" alt="Strata Framework" width="600">
 
 ### `v1.0.0` — first public release
 
