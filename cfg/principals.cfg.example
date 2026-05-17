@@ -1,0 +1,18 @@
+###############################################################################
+#  principals.cfg · Real-player → Strata staff-tier assignments
+#
+#  Copy to `principals.cfg` and fill in. `principals.cfg` is gitignored so
+#  staff identifiers never leak in a public repo.
+#
+#  Tiers (defined in permissions.cfg, highest → lowest):
+#    group.dev > group.sudo > group.admin > group.mod > group.jrmod
+#
+#  Identifier formats:
+#    identifier.fivem:<cfx user id>      (recommended — survives Discord/Steam unlink)
+#    identifier.discord:<snowflake>
+#    identifier.steam:<hex steamid64>
+#    identifier.license:<rockstar hash>
+###############################################################################
+
+# add_principal identifier.fivem:00000000   group.dev    #replace_me
+# add_principal identifier.discord:000      group.admin  #replace_me

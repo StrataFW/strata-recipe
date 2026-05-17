@@ -1,0 +1,5 @@
+out/
+*.zip
+cfg/secrets.cfg
+cfg/principals.cfg
+*.log

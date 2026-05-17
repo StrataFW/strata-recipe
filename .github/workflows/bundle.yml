@@ -1,0 +1,106 @@
+name: Bundle
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # weekly, Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. 2026.05.17). Empty = no release, just artifact.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up tooling
+        run: sudo apt-get update && sudo apt-get install -y jq curl unzip rsync
+
+      - name: Stage layout
+        run: |
+          rm -rf out
+          mkdir -p out/resources/[cfx] out/resources/[ox] out/resources/[strata]
+          cp -r cfg out/
+          cp server.cfg out/
+
+      - name: Fetch [cfx] (cfx-server-data + screenshot-basic)
+        run: |
+          curl -fsSL -o cfx.zip https://codeload.github.com/citizenfx/cfx-server-data/zip/refs/heads/master
+          unzip -q cfx.zip -d cfx-src
+          mv cfx-src/cfx-server-data-master/resources/[gameplay]  out/resources/[cfx]/
+          mv cfx-src/cfx-server-data-master/resources/[gamemodes] out/resources/[cfx]/
+          mv cfx-src/cfx-server-data-master/resources/[managers]  out/resources/[cfx]/
+          mv cfx-src/cfx-server-data-master/resources/[system]    out/resources/[cfx]/
+          rm -rf cfx-src cfx.zip
+          curl -fsSL -o sb.zip https://codeload.github.com/citizenfx/screenshot-basic/zip/refs/heads/master
+          unzip -q sb.zip -d sb-src
+          mv sb-src/screenshot-basic-master out/resources/[cfx]/screenshot-basic
+          rm -rf sb-src sb.zip
+
+      - name: Fetch [ox] latest releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for r in oxmysql ox_lib ox_core ox_target ox_inventory ox_banking ox_commands ox_doorlock ox_fuel; do
+            echo "::group::overextended/$r"
+            asset=$(gh release view --repo overextended/$r --json assets -q '.assets[0].url' 2>/dev/null || true)
+            if [ -n "$asset" ]; then
+              curl -fsSL -o "$r.zip" "$asset"
+              unzip -q "$r.zip" -d "out/resources/[ox]/"
+              # normalize folder name in case zip extracted as something else
+              [ -d "out/resources/[ox]/$r" ] || mv "out/resources/[ox]"/* "out/resources/[ox]/$r" 2>/dev/null || true
+              rm "$r.zip"
+            else
+              echo "no release — falling back to default branch"
+              curl -fsSL -o "$r.zip" "https://codeload.github.com/overextended/$r/zip/refs/heads/main" \
+                || curl -fsSL -o "$r.zip" "https://codeload.github.com/overextended/$r/zip/refs/heads/master"
+              unzip -q "$r.zip" -d "out/resources/[ox]/"
+              mv "out/resources/[ox]/$r-"* "out/resources/[ox]/$r"
+              rm "$r.zip"
+            fi
+            echo "::endgroup::"
+          done
+
+      - name: Fetch [strata] latest releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for r in st_log st_bootstrap st_ipl st_multichar st_spawn st_chat st_apartments st_admin st_appearance; do
+            echo "::group::StrataFW/$r"
+            asset=$(gh release view --repo StrataFW/$r --json assets -q '.assets[0].url' 2>/dev/null || true)
+            if [ -z "$asset" ]; then
+              echo "no published release for $r — skipping"
+              echo "::endgroup::"
+              continue
+            fi
+            curl -fsSL -o "$r.zip" "$asset"
+            unzip -q "$r.zip" -d "out/resources/[strata]/"
+            rm "$r.zip"
+            echo "::endgroup::"
+          done
+
+      - name: Zip bundle
+        run: |
+          cd out && zip -qr ../strata-bundle.zip . && cd ..
+          ls -lh strata-bundle.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strata-bundle
+          path: strata-bundle.zip
+          retention-days: 30
+
+      - name: Publish release
+        if: ${{ github.event.inputs.tag != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          files: strata-bundle.zip
+          generate_release_notes: true

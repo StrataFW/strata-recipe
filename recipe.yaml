@@ -1,0 +1,171 @@
+$engine: 3
+$onesync: on
+$minFxVersion: 6552
+
+name: Strata Framework
+version: 1.0.0
+author: StrataFW (okIndica)
+description: |
+  Drop-in txAdmin recipe for a Strata roleplay server. Pulls every layer the
+  framework needs:
+    · [cfx]    — stock CitizenFX resources + screenshot-basic
+    · [ox]     — the OX ecosystem (overextended.dev)
+    · [strata] — Strata's own resources from the StrataFW org
+
+  After deploy: copy `cfg/secrets.cfg.example` to `cfg/secrets.cfg`, fill in
+  your Cfx license + MySQL string, then start the server.
+
+tasks:
+
+  ##############################################################################
+  # 1. Layout
+  ##############################################################################
+
+  - action: ensure_dir
+    path: ./resources/[cfx]
+  - action: ensure_dir
+    path: ./resources/[ox]
+  - action: ensure_dir
+    path: ./resources/[strata]
+
+
+  ##############################################################################
+  # 2. [cfx] — stock CitizenFX resources
+  ##############################################################################
+
+  - action: download_github
+    src: https://github.com/citizenfx/cfx-server-data
+    ref: master
+    dest: ./tmp/cfx-server-data
+  - action: move_path
+    src: ./tmp/cfx-server-data/resources/[gameplay]
+    dest: ./resources/[cfx]/[gameplay]
+  - action: move_path
+    src: ./tmp/cfx-server-data/resources/[gamemodes]
+    dest: ./resources/[cfx]/[gamemodes]
+  - action: move_path
+    src: ./tmp/cfx-server-data/resources/[managers]
+    dest: ./resources/[cfx]/[managers]
+  - action: move_path
+    src: ./tmp/cfx-server-data/resources/[system]
+    dest: ./resources/[cfx]/[system]
+  - action: remove_path
+    path: ./tmp/cfx-server-data
+
+  - action: download_github
+    src: https://github.com/citizenfx/screenshot-basic
+    ref: master
+    dest: ./resources/[cfx]/screenshot-basic
+
+
+  ##############################################################################
+  # 3. [ox] — overextended ecosystem (latest release zip for each)
+  ##############################################################################
+
+  - action: download_github
+    src: https://github.com/overextended/oxmysql
+    ref: main
+    dest: ./resources/[ox]/oxmysql
+  - action: download_github
+    src: https://github.com/overextended/ox_lib
+    ref: master
+    dest: ./resources/[ox]/ox_lib
+  - action: download_github
+    src: https://github.com/overextended/ox_core
+    ref: main
+    dest: ./resources/[ox]/ox_core
+  - action: download_github
+    src: https://github.com/overextended/ox_target
+    ref: main
+    dest: ./resources/[ox]/ox_target
+  - action: download_github
+    src: https://github.com/overextended/ox_inventory
+    ref: main
+    dest: ./resources/[ox]/ox_inventory
+  - action: download_github
+    src: https://github.com/overextended/ox_banking
+    ref: main
+    dest: ./resources/[ox]/ox_banking
+  - action: download_github
+    src: https://github.com/overextended/ox_commands
+    ref: main
+    dest: ./resources/[ox]/ox_commands
+  - action: download_github
+    src: https://github.com/overextended/ox_doorlock
+    ref: main
+    dest: ./resources/[ox]/ox_doorlock
+  - action: download_github
+    src: https://github.com/overextended/ox_fuel
+    ref: main
+    dest: ./resources/[ox]/ox_fuel
+
+
+  ##############################################################################
+  # 4. [strata] — Strata's own resources
+  ##############################################################################
+
+  - action: download_github
+    src: https://github.com/StrataFW/st_log
+    ref: main
+    dest: ./resources/[strata]/st_log
+  - action: download_github
+    src: https://github.com/StrataFW/st_bootstrap
+    ref: main
+    dest: ./resources/[strata]/st_bootstrap
+  - action: download_github
+    src: https://github.com/StrataFW/st_ipl
+    ref: main
+    dest: ./resources/[strata]/st_ipl
+  - action: download_github
+    src: https://github.com/StrataFW/st_multichar
+    ref: main
+    dest: ./resources/[strata]/st_multichar
+  - action: download_github
+    src: https://github.com/StrataFW/st_spawn
+    ref: main
+    dest: ./resources/[strata]/st_spawn
+  - action: download_github
+    src: https://github.com/StrataFW/st_chat
+    ref: main
+    dest: ./resources/[strata]/st_chat
+  - action: download_github
+    src: https://github.com/StrataFW/st_apartments
+    ref: main
+    dest: ./resources/[strata]/st_apartments
+  - action: download_github
+    src: https://github.com/StrataFW/st_admin
+    ref: main
+    dest: ./resources/[strata]/st_admin
+  - action: download_github
+    src: https://github.com/StrataFW/st_appearance
+    ref: main
+    dest: ./resources/[strata]/st_appearance
+
+
+  ##############################################################################
+  # 5. Server config
+  ##############################################################################
+
+  - action: download_github
+    src: https://github.com/StrataFW/strata-recipe
+    ref: main
+    dest: ./tmp/strata-recipe
+  - action: move_path
+    src: ./tmp/strata-recipe/server.cfg
+    dest: ./server.cfg
+  - action: move_path
+    src: ./tmp/strata-recipe/cfg
+    dest: ./cfg
+  - action: remove_path
+    path: ./tmp
+
+
+  ##############################################################################
+  # 6. Database
+  ##############################################################################
+  #  Every Strata resource self-bootstraps its own tables on first boot
+  #  (CREATE TABLE IF NOT EXISTS inside MySQL.ready). We only validate the
+  #  connection here so a bad connection string fails fast in the deploy UI
+  #  instead of mid-boot.
+
+  - action: connect_database
